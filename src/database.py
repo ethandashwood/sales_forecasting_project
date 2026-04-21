@@ -80,15 +80,15 @@ def get_latest_user_features(user_id: int):
         df = pd.read_sql(query, conn, params=(user_id,))
         conn.close()
 
-        if df.empty:
-            return None
-
-        # Convert to list (index 0 is most recent week)
-        totals = df['weekly_total'].astype(float).tolist()
-        
-        # Determine the "next" period for which we are forecasting
-        last_date = pd.to_datetime(df['sale_week'].iloc[0])
-        next_period = last_date + pd.Timedelta(weeks=1)
+        if not df.empty:
+            # Convert to list (index 0 is most recent week)
+            totals = df['weekly_total'].astype(float).tolist()
+            last_date = pd.to_datetime(df['sale_week'].iloc[0])
+            next_period = last_date + pd.Timedelta(weeks=1)
+        else:
+            # Handle cold-start: if no data exists, use baseline defaults
+            totals = []
+            next_period = pd.Timestamp.now()
 
         return {
             "business_type": "custom_entry",

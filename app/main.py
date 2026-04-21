@@ -42,10 +42,9 @@ def predict_for_user(user_id: int, horizon: str):
 
     features = get_latest_user_features(user_id)
 
-    if not features:
+    if features is None:
         raise HTTPException(
-            status_code=404, 
-            detail=f"No sales data found for user {user_id}. Please log sales first."
+            status_code=500, detail="Database error: Unable to retrieve user profile for prediction."
         )
 
     try:
