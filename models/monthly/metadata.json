@@ -1,0 +1,19 @@
+{
+  "features": [
+    "business_type",
+    "store_type",
+    "store_size_sqft",
+    "region",
+    "product_category",
+    "year",
+    "month",
+    "quarter",
+    "week_of_year",
+    "lag_1",
+    "lag_2",
+    "lag_4_mean",
+    "lag_8_mean"
+  ],
+  "mae": 5.37676116572507,
+  "rmse": 8.020421051653821
+}
