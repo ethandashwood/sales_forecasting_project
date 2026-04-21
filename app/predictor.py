@@ -4,7 +4,6 @@ from pathlib import Path
 import joblib
 import pandas as pd
 
-
 class ModelRegistry:
     def __init__(self, base_dir: str = "models"):
         self.base_dir = Path(base_dir)
