@@ -7,3 +7,4 @@ lightgbm
 joblib
 pydantic
 python-multipart
+mysql-connector-python
