@@ -28,10 +28,14 @@ def predict_weekly(request: PredictionRequest):
         return registry.predict("weekly", request.model_dump())
     except Exception as e:
 <<<<<<< HEAD
+<<<<<<< HEAD
         raise HTTPException(
             status_code=500,
             detail=f"Weekly prediction failed: {str(e)}"
         )
+=======
+        raise HTTPException(status_code=500, detail=f"Weekly prediction failed: {str(e)}")
+>>>>>>> parent of 1c053ad (4)
 =======
         raise HTTPException(status_code=500, detail=f"Weekly prediction failed: {str(e)}")
 >>>>>>> parent of 1c053ad (4)
@@ -43,10 +47,14 @@ def predict_monthly(request: PredictionRequest):
         return registry.predict("monthly", request.model_dump())
     except Exception as e:
 <<<<<<< HEAD
+<<<<<<< HEAD
         raise HTTPException(
             status_code=500,
             detail=f"Monthly prediction failed: {str(e)}"
         )
+=======
+        raise HTTPException(status_code=500, detail=f"Monthly prediction failed: {str(e)}")
+>>>>>>> parent of 1c053ad (4)
 =======
         raise HTTPException(status_code=500, detail=f"Monthly prediction failed: {str(e)}")
 >>>>>>> parent of 1c053ad (4)
@@ -66,6 +74,9 @@ def predict_for_user(user_id: int, request: PredictionRequest):
 =======
         monthly_prediction = monthly_result["predicted_revenue"]
         yearly_prediction = monthly_prediction * 12
+<<<<<<< HEAD
+>>>>>>> parent of 1c053ad (4)
+=======
 >>>>>>> parent of 1c053ad (4)
 
         return {
@@ -77,10 +88,14 @@ def predict_for_user(user_id: int, request: PredictionRequest):
 
     except Exception as e:
 <<<<<<< HEAD
+<<<<<<< HEAD
         raise HTTPException(
             status_code=500,
             detail=f"Prediction failed: {str(e)}"
         )
+=======
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+>>>>>>> parent of 1c053ad (4)
 =======
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 >>>>>>> parent of 1c053ad (4)
