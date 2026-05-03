@@ -27,8 +27,7 @@ def predict_weekly(request: PredictionRequest):
     try:
         return registry.predict("weekly", request.model_dump())
     except Exception as e:
-<<<<<<< HEAD
-<<<<<<< HEAD
+
         raise HTTPException(
             status_code=500,
             detail=f"Weekly prediction failed: {str(e)}"
