@@ -1,109 +1,75 @@
+import os
 import mysql.connector
-import pandas as pd
 
-# Database configuration (derived from your config.php)
-DB_CONFIG = {
-    "host": "localhost",
-    "user": "ed906_fedbu1",
-    "password": "[qxUi3v&o}Ci",
-    "database": "ed906_fedb1"
-}
 
 def get_db_connection():
-    """Establishes and returns a MySQL connection object."""
-    return mysql.connector.connect(**DB_CONFIG)
+    return mysql.connector.connect(
+        host=os.getenv("DB_HOST"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        database=os.getenv("DB_NAME"),
+        port=int(os.getenv("DB_PORT", "3306")),
+    )
 
-def fetch_user_sales_df():
-    """
-    Fetches sales data from the MySQL 'weekly_sales' table and transforms
-    it into the standardized format used by the training scripts.
-    """
-    try:
-        conn = get_db_connection()
-        query = "SELECT user_id, sale_week, mon, tue, wed, thu, fri, sat, sun FROM weekly_sales"
-        df = pd.read_sql(query, conn)
-        conn.close()
-        
-        if df.empty:
-            return pd.DataFrame()
 
-        # Map day columns to row-based dates
-        days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
-        day_offsets = {'mon': 0, 'tue': 1, 'wed': 2, 'thu': 3, 'fri': 4, 'sat': 5, 'sun': 6}
+def save_or_update_user_predictions(
+    user_id: int,
+    weekly_prediction: float,
+    monthly_prediction: float,
+    yearly_prediction: float,
+):
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-        # Melt the wide format (days as columns) into long format (days as rows)
-        df_long = df.melt(
-            id_vars=['user_id', 'sale_week'], 
-            value_vars=days, 
-            var_name='day_name', 
-            value_name='sales'
+    query = """
+        INSERT INTO user_predictions (
+            user_id,
+            weekly_prediction,
+            monthly_prediction,
+            yearly_prediction
         )
-
-        # Calculate the actual date for each entry
-        df_long['date'] = pd.to_datetime(df_long['sale_week'])
-        df_long['date'] = df_long.apply(
-            lambda r: r['date'] + pd.Timedelta(days=day_offsets[r['day_name']]), 
-            axis=1
-        )
-
-        # Standardize features to match the unified schema (unify_schema.py)
-        df_long['business_id'] = 'user_' + df_long['user_id'].astype(str)
-        df_long['store_id'] = df_long['user_id'].astype(str)
-        df_long['business_type'] = 'custom_entry'
-        df_long['store_type'] = 'user_logged'
-        df_long['store_size_sqft'] = 2000
-        df_long['region'] = 'local'
-        df_long['product_category'] = 'general'
-        df_long['is_holiday'] = 0
-
-        return df_long[['date', 'business_id', 'sales', 'store_id', 'business_type', 'store_type', 'store_size_sqft', 'region', 'product_category', 'is_holiday']]
-    
-    except Exception as e:
-        print(f"Error connecting to MySQL or fetching data: {e}")
-        return pd.DataFrame()
-
-def get_latest_user_features(user_id: int):
+        VALUES (%s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE
+            weekly_prediction = VALUES(weekly_prediction),
+            monthly_prediction = VALUES(monthly_prediction),
+            yearly_prediction = VALUES(yearly_prediction),
+            updated_at = CURRENT_TIMESTAMP
     """
-    Retrieves the most recent sales data for a specific user and calculates
-    lag features required for the prediction models.
+
+    cursor.execute(
+        query,
+        (
+            user_id,
+            weekly_prediction,
+            monthly_prediction,
+            yearly_prediction,
+        ),
+    )
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+
+def get_user_predictions(user_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    query = """
+        SELECT
+            user_id,
+            weekly_prediction,
+            monthly_prediction,
+            yearly_prediction,
+            updated_at
+        FROM user_predictions
+        WHERE user_id = %s
     """
-    try:
-        conn = get_db_connection()
-        # Fetch up to 8 weeks to satisfy lag_8_mean requirement
-        query = """
-            SELECT (mon + tue + wed + thu + fri + sat + sun) as weekly_total, sale_week 
-            FROM weekly_sales 
-            WHERE user_id = %s 
-            ORDER BY sale_week DESC 
-            LIMIT 8
-        """
-        df = pd.read_sql(query, conn, params=(user_id,))
-        conn.close()
 
-        if not df.empty:
-            # Convert to list (index 0 is most recent week)
-            totals = df['weekly_total'].astype(float).tolist()
-            last_date = pd.to_datetime(df['sale_week'].iloc[0])
-            next_period = last_date + pd.Timedelta(weeks=1)
-        else:
-            # Handle cold-start: if no data exists, use baseline defaults
-            totals = []
-            next_period = pd.Timestamp.now()
+    cursor.execute(query, (user_id,))
+    result = cursor.fetchone()
 
-        return {
-            "business_type": "custom_entry",
-            "store_type": "user_logged",
-            "store_size_sqft": 2000.0,
-            "region": "local",
-            "product_category": "general",
-            "year": int(next_period.year),
-            "month": int(next_period.month),
-            "week_of_year": int(next_period.isocalendar().week),
-            "lag_1": totals[0] if len(totals) >= 1 else 0.0,
-            "lag_2": totals[1] if len(totals) >= 2 else 0.0,
-            "lag_4_mean": sum(totals[:4]) / len(totals[:4]) if len(totals) >= 1 else 0.0,
-            "lag_8_mean": sum(totals[:8]) / len(totals[:8]) if len(totals) >= 1 else 0.0
-        }
-    except Exception as e:
-        print(f"Error fetching user features: {e}")
-        return None
+    cursor.close()
+    conn.close()
+
+    return result
